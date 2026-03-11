@@ -101,7 +101,7 @@ export default function ChessGame() {
   }
 
   // NEW: Handle clicking on the board squares
-  function onSquareClick(square: string) {
+function onSquareClick({ square }: { square: string }) {
     if (overlayMessage) return;
     if (gameMode === "PvAI") {
       const isPlayerTurn = (playerColor === "white" && game.turn() === "w") || (playerColor === "black" && game.turn() === "b");
@@ -252,7 +252,7 @@ export default function ChessGame() {
             boardOrientation: playerColor,
             darkSquareStyle: { backgroundColor: "#779556" },
             lightSquareStyle: { backgroundColor: "#ebecd0" },
-            customSquareStyles: optionSquares,
+            squareStyles: optionSquares,
             animationDurationInMs: 300, 
           }}
         />
