@@ -1,7 +1,7 @@
 // app/components/Game2048.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Swal from "sweetalert2";
 import { getEmptyBoard, addRandomTile, moveBoard, checkGameOver, Board } from "../utils/game2048";
 
@@ -29,8 +29,8 @@ export default function Game2048() {
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
 
-  // Touch handlers for mobile swipe
-  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+// Touch handlers for mobile swipe (using useRef for instant tracking)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const initGame = useCallback(() => {
     let newBoard = getEmptyBoard();
@@ -85,20 +85,21 @@ export default function Game2048() {
 
   // Swipe logic
   const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStart) return;
+    if (!touchStartRef.current) return;
+    
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
 
-    const dx = touchEndX - touchStart.x;
-    const dy = touchEndY - touchStart.y;
+    const dx = touchEndX - touchStartRef.current.x;
+    const dy = touchEndY - touchStartRef.current.y;
     const absDx = Math.abs(dx);
     const absDy = Math.abs(dy);
 
-    // Require a minimum swipe distance to prevent accidental triggers
+    // Require a minimum swipe distance to prevent accidental triggers (taps)
     if (Math.max(absDx, absDy) > 30) {
       if (absDx > absDy) {
         handleMove(dx > 0 ? "RIGHT" : "LEFT");
@@ -106,7 +107,9 @@ export default function Game2048() {
         handleMove(dy > 0 ? "DOWN" : "UP");
       }
     }
-    setTouchStart(null);
+    
+    // Reset the ref after the swipe is calculated
+    touchStartRef.current = null;
   };
 
   const handleNewGameClick = () => {
