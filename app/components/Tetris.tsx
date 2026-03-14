@@ -17,11 +17,28 @@ export default function Tetris() {
   const [canHold, setCanHold] = useState(true);
   
   const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(0); // NEW: High Score State
   const [level, setLevel] = useState(1);
   const [gameOver, setGameOver] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   
   const [clearingRows, setClearingRows] = useState<number[]>([]);
+
+  // NEW: Load High Score from Local Storage on mount
+  useEffect(() => {
+    const savedHighScore = localStorage.getItem("tetrisHighScore");
+    if (savedHighScore) {
+      setHighScore(parseInt(savedHighScore, 10));
+    }
+  }, []);
+
+  // NEW: Update High Score in real-time if current score beats it
+  useEffect(() => {
+    if (score > highScore) {
+      setHighScore(score);
+      localStorage.setItem("tetrisHighScore", score.toString());
+    }
+  }, [score, highScore]);
 
   const calculateDropTime = (lvl: number) => {
     if (lvl <= 1) return 800; 
@@ -71,7 +88,6 @@ export default function Tetris() {
     });
   };
 
-  // NEW: Centralized locking logic so Hard Drop can trigger it instantly
   const lockPiece = useCallback((lockX: number, lockY: number, currentTetromino: any) => {
     if (lockY <= 0) {
       setGameOver(true);
@@ -129,7 +145,7 @@ export default function Tetris() {
     if (!checkCollision({ shape: player.tetromino.shape, x: player.pos.x, y: player.pos.y + 1 }, board)) {
       setPlayer((prev) => ({ ...prev, pos: { x: prev.pos.x, y: prev.pos.y + 1 } }));
     } else {
-      lockPiece(player.pos.x, player.pos.y, player.tetromino); // Trigger lock instantly
+      lockPiece(player.pos.x, player.pos.y, player.tetromino); 
     }
   }, [player, board, gameOver, isPaused, clearingRows, lockPiece]);
 
@@ -162,7 +178,6 @@ export default function Tetris() {
     setCanHold(false);
   };
 
-  // FIX: Hard drop now calculates the bottom and locks immediately!
   const hardDrop = useCallback(() => {
     if (gameOver || isPaused || clearingRows.length > 0) return;
     
@@ -177,13 +192,17 @@ export default function Tetris() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (gameOver || isPaused || clearingRows.length > 0) return;
-      if (e.key === "ArrowLeft") movePlayer(-1);
-      else if (e.key === "ArrowRight") movePlayer(1);
-      else if (e.key === "ArrowDown") drop();
-      else if (e.key === "ArrowUp") rotatePlayer();
+      
+      const key = e.key.toLowerCase();
+      
+      if (key === "a") movePlayer(-1);
+      else if (key === "d") movePlayer(1);
+      else if (key === "s") drop();
+      else if (key === "w") rotatePlayer();
       else if (e.key === " ") { e.preventDefault(); hardDrop(); }
-      else if (e.key === "c" || e.key === "Shift") hold();
+      else if (key === "c" || key === "shift") hold();
     };
+    
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [player, gameOver, isPaused, clearingRows, movePlayer, drop, rotatePlayer, hardDrop, hold]);
@@ -223,7 +242,7 @@ export default function Tetris() {
           </button>
         </div>
 
-        <div className="bg-gray-900 border-4 border-gray-700 p-1 rounded-lg">
+        <div className="bg-gray-900 border-4 border-gray-700 p-1 rounded-lg shadow-xl">
           <div className="grid gap-px bg-gray-800 relative" style={{ gridTemplateColumns: `repeat(${BOARD_WIDTH}, 20px)`, gridTemplateRows: `repeat(${BOARD_HEIGHT}, 20px)` }}>
             
             {board.map((row, y) => {
@@ -278,12 +297,19 @@ export default function Tetris() {
 
         <div className="flex flex-col gap-2">
           {renderMiniGrid(nextPiece, "Next")}
+          
+          {/* NEW: High Score Display */}
+          <div className="bg-gray-800 p-2 rounded-lg border-2 border-yellow-600/50 text-center text-white shadow-[0_0_10px_rgba(202,138,4,0.2)]">
+            <p className="text-[10px] text-yellow-400 font-black tracking-widest uppercase">High Score</p>
+            <p className="font-bold">{highScore}</p>
+          </div>
+
           <div className="bg-gray-800 p-2 rounded-lg border-2 border-gray-700 text-center text-white">
-            <p className="text-xs text-gray-400">SCORE</p>
+            <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase">Score</p>
             <p className="font-bold">{score}</p>
           </div>
           <div className="bg-gray-800 p-2 rounded-lg border-2 border-gray-700 text-center text-white">
-            <p className="text-xs text-gray-400">LEVEL</p>
+            <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase">Level</p>
             <p className="font-bold">{level}</p>
           </div>
         </div>

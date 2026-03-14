@@ -28,8 +28,25 @@ export default function Game2048() {
   const [board, setBoard] = useState<Board>(getEmptyBoard());
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const [highScore, setHighScore] = useState(0);
 
-// Touch handlers for mobile swipe (using useRef for instant tracking)
+  // Load High Score on Mount
+  useEffect(() => {
+    const savedHighScore = localStorage.getItem("2048HighScore");
+    if (savedHighScore) {
+      setHighScore(parseInt(savedHighScore, 10));
+    }
+  }, []);
+
+  // Update High Score if current score beats it
+  useEffect(() => {
+    if (score > highScore) {
+      setHighScore(score);
+      localStorage.setItem("2048HighScore", score.toString());
+    }
+  }, [score, highScore]);
+
+  // Touch handlers for mobile swipe (using useRef for instant tracking)
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const initGame = useCallback(() => {
@@ -49,7 +66,7 @@ export default function Game2048() {
     if (gameOver) return;
 
     const { newBoard, scoreGained, moved } = moveBoard(board, direction);
-    
+
     if (moved) {
       const boardWithNewTile = addRandomTile(newBoard);
       setBoard(boardWithNewTile);
@@ -90,7 +107,7 @@ export default function Game2048() {
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (!touchStartRef.current) return;
-    
+
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
 
@@ -107,7 +124,7 @@ export default function Game2048() {
         handleMove(dy > 0 ? "DOWN" : "UP");
       }
     }
-    
+
     // Reset the ref after the swipe is calculated
     touchStartRef.current = null;
   };
@@ -130,12 +147,12 @@ export default function Game2048() {
 
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto font-sans select-none">
-      
+
       {/* Container: Row on Desktop, Col on Mobile */}
       <div className="flex flex-col md:flex-row gap-6 md:gap-12 items-center md:items-start w-full justify-center">
-        
+
         {/* Game Board */}
-        <div 
+        <div
           className="bg-gray-400 p-3 rounded-xl border-4 border-gray-500 touch-none relative"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -159,13 +176,18 @@ export default function Game2048() {
           </div>
         </div>
 
-        {/* Score Display (At the side on desktop, stacked on mobile) */}
-        <div className="flex flex-row md:flex-col gap-4 w-full md:w-32 justify-center">
-          <div className="bg-gray-800 p-4 rounded-xl border-2 border-gray-700 text-center w-full shadow-lg">
-            <p className="text-sm text-gray-400 uppercase font-bold tracking-wider mb-1">Score</p>
-            <p className="text-2xl font-extrabold text-white">{score}</p>
+        <div className="flex gap-1 flex-col">
+          <div className="bg-gray-800 p-2 px-4 rounded-lg border-2 border-yellow-600/50 text-center text-white shadow-[0_0_10px_rgba(202,138,4,0.2)]">
+            <p className="text-[10px] text-yellow-400 font-black tracking-widest uppercase">BEST</p>
+            <p className="font-bold text-lg">{highScore}</p>
+          </div>
+
+          <div className="bg-gray-800 p-2 rounded-lg border-2 border-gray-700 text-center text-white">
+            <p className="text-xs text-gray-400">SCORE</p>
+            <p className="font-bold">{score}</p>
           </div>
         </div>
+
 
       </div>
 
