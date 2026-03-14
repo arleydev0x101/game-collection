@@ -6,23 +6,16 @@ import Swal from "sweetalert2";
 import { Board, Player, checkWinner, getBestTicTacToeMove } from "../utils/tictactoe";
 
 export default function TicTacToe() {
-  const players = new Map<Player, string>([
-    ["X", "Player 1"],
-    ["O", "Player 2"],
-  ]);
-
   const [board, setBoard] = useState<Board>(Array(9).fill(null));
-  const [turn, setTurn] = useState<Player>(players.get("X") ? "X" : "O");
+  const [turn, setTurn] = useState<Player>("X");
   const [gameMode, setGameMode] = useState<"PvAI" | "PvP">("PvAI");
   const [difficulty, setDifficulty] = useState("Intermediate");
-  const [playerSide, setPlayerSide] = useState<Player>(players.get("X") ? "X" : "O");
-  const [gameStatus, setGameStatus] = useState(`${players.get(turn)}'s Turn`);
+  const [playerSide, setPlayerSide] = useState<Player>("X");
+  const [gameStatus, setGameStatus] = useState("X's Turn");
   const [overlayMessage, setOverlayMessage] = useState<string | null>(null);
 
   const [scoreX, setScoreX] = useState(0);
   const [scoreO, setScoreO] = useState(0);
-
-
 
   const updateGameStatus = useCallback((currentBoard: Board, currentTurn: Player) => {
     const winner = checkWinner(currentBoard);
@@ -31,13 +24,13 @@ export default function TicTacToe() {
         setGameStatus("It's a Draw!");
         setOverlayMessage("It's a Draw! 🤝");
       } else {
-        setGameStatus(`${players.get(winner)} Wins!`);
-        setOverlayMessage(`${players.get(winner)} Wins! 🎉`);
+        setGameStatus(`${winner} Wins!`);
+        setOverlayMessage(`${winner} Wins! 🎉`);
         if (winner === "X") setScoreX(s => s + 1);
         if (winner === "O") setScoreO(s => s + 1);
       }
     } else {
-      setGameStatus(`${players.get(currentTurn)}'s Turn`);
+      setGameStatus(`${currentTurn}'s Turn`);
     }
   }, []);
 
@@ -127,32 +120,32 @@ export default function TicTacToe() {
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-md mx-auto relative font-sans">
       
-      {overlayMessage && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 rounded-xl backdrop-blur-sm">
-          <h1 className="text-4xl font-extrabold text-white animate-pulse text-center p-4">
-            {overlayMessage}
-          </h1>
-        </div>
-      )}
-
       <div className="w-full flex justify-between items-end mb-2 px-2">
         <h2 className="text-xl font-bold text-gray-800">{gameStatus}</h2>
         <div className="text-sm font-bold text-gray-600 drop-shadow-md">
-          {playerSide === "X" ? `${players.get("O")} Wins: ${scoreO}` : `${players.get("X")} Wins: ${scoreX}`}
+          {playerSide === "X" ? `O Wins: ${scoreO}` : `X Wins: ${scoreX}`}
         </div>
       </div>
 
-      {/* FIX: Added grid-rows-3 to lock the height of the rows! */}
-      <div className="w-full aspect-square border-4 border-gray-800 rounded-lg overflow-hidden bg-gray-800 grid grid-cols-3 grid-rows-3 gap-1">
+      {/* FIX: Added "relative" to the container so the overlay stays inside */}
+      <div className="w-full aspect-square border-4 border-gray-800 rounded-lg overflow-hidden bg-gray-800 grid grid-cols-3 grid-rows-3 gap-1 relative">
+        
+        {/* FIX: Overlay moved here! Now it only covers the 3x3 grid */}
+        {overlayMessage && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-white animate-pulse text-center p-4 drop-shadow-lg">
+              {overlayMessage}
+            </h1>
+          </div>
+        )}
+
         {board.map((cell, index) => (
           <div
             key={index}
             onClick={() => handleSquareClick(index)}
-            // FIX: Added w-full and h-full to force the cell to obey the grid
             className="bg-white w-full h-full flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors overflow-hidden"
           >
             {cell && (
-              // FIX: Added leading-none to prevent the font's line-height from stretching the box
               <span className={`text-7xl sm:text-9xl font-black drop-shadow-md leading-none select-none ${cell === "X" ? "text-blue-600" : "text-red-600"}`}>
                 {cell}
               </span>
