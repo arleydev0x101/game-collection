@@ -11,21 +11,24 @@ export const getInitialBoard = (): Board => {
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
       if ((r + c) % 2 === 1) {
-        if (r < 3) board[r][c] = { color: "b", isKing: false }; // Black top
-        if (r > 4) board[r][c] = { color: "w", isKing: false }; // White bottom
+        if (r < 3) board[r][c] = { color: "b", isKing: false }; 
+        if (r > 4) board[r][c] = { color: "w", isKing: false }; 
       }
     }
   }
   return board;
 };
 
-// Generates valid moves for a specific color. Forces jumps if available!
-export const getValidMoves = (board: Board, turn: PieceColor): Move[] => {
+// UPDATED: Now accepts `mustJumpPos` to force a double-jump sequence
+export const getValidMoves = (board: Board, turn: PieceColor, mustJumpPos?: Position | null): Move[] => {
   const moves: Move[] = [];
   const jumps: Move[] = [];
 
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
+      // If we are locked into a multi-jump, ignore all other pieces
+      if (mustJumpPos && (r !== mustJumpPos.r || c !== mustJumpPos.c)) continue;
+
       const piece = board[r][c];
       if (!piece || piece.color !== turn) continue;
 
@@ -37,7 +40,6 @@ export const getValidMoves = (board: Board, turn: PieceColor): Move[] => {
           if (!board[nr][nc]) {
             moves.push({ from: { r, c }, to: { r: nr, c: nc } });
           } else if (board[nr][nc]?.color !== turn) {
-            // Check jump
             const jr = nr + dr, jc = nc + dc;
             if (jr >= 0 && jr < 8 && jc >= 0 && jc < 8 && !board[jr][jc]) {
               jumps.push({ from: { r, c }, to: { r: jr, c: jc }, jump: { r: nr, c: nc } });
@@ -47,7 +49,8 @@ export const getValidMoves = (board: Board, turn: PieceColor): Move[] => {
       }
     }
   }
-  return jumps.length > 0 ? jumps : moves; // Must jump if possible
+  // If locked into a mustJumpPos, standard moves are illegal, only return jumps.
+  return jumps.length > 0 ? jumps : (mustJumpPos ? [] : moves); 
 };
 
 export const applyMove = (board: Board, move: Move): Board => {
@@ -59,14 +62,12 @@ export const applyMove = (board: Board, move: Move): Board => {
   
   if (move.jump) newBoard[move.jump.r][move.jump.c] = null;
 
-  // King Promotion
   if (piece.color === "w" && move.to.r === 0) newBoard[move.to.r][move.to.c] = { ...piece, isKing: true };
   if (piece.color === "b" && move.to.r === 7) newBoard[move.to.r][move.to.c] = { ...piece, isKing: true };
 
   return newBoard;
 };
 
-// Simple AI Evaluation
 const evaluate = (board: Board, color: PieceColor) => {
   let score = 0;
   for (let r = 0; r < 8; r++) {
@@ -81,7 +82,6 @@ const evaluate = (board: Board, color: PieceColor) => {
   return score;
 };
 
-// Minimax AI
 const minimax = (board: Board, depth: number, alpha: number, beta: number, isMax: boolean, color: PieceColor): number => {
   const moves = getValidMoves(board, isMax ? color : (color === "w" ? "b" : "w"));
   if (depth === 0 || moves.length === 0) return evaluate(board, color);
@@ -107,8 +107,9 @@ const minimax = (board: Board, depth: number, alpha: number, beta: number, isMax
   }
 };
 
-export const getBestCheckersMove = (board: Board, turn: PieceColor, difficulty: string): Move | null => {
-  const moves = getValidMoves(board, turn);
+// UPDATED: AI now passes mustJumpPos to properly handle its own multi-jumps
+export const getBestCheckersMove = (board: Board, turn: PieceColor, difficulty: string, mustJumpPos?: Position | null): Move | null => {
+  const moves = getValidMoves(board, turn, mustJumpPos);
   if (moves.length === 0) return null;
 
   if (difficulty === "Easy") return moves[Math.floor(Math.random() * moves.length)];
