@@ -17,14 +17,15 @@ export default function Tetris() {
   const [canHold, setCanHold] = useState(true);
   
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(0); // NEW: High Score State
+  const [highScore, setHighScore] = useState(0);
   const [level, setLevel] = useState(1);
   const [gameOver, setGameOver] = useState(false);
+  
   const [isPaused, setIsPaused] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null); // NEW: Countdown state
   
   const [clearingRows, setClearingRows] = useState<number[]>([]);
 
-  // NEW: Load High Score from Local Storage on mount
   useEffect(() => {
     const savedHighScore = localStorage.getItem("tetrisHighScore");
     if (savedHighScore) {
@@ -32,13 +33,36 @@ export default function Tetris() {
     }
   }, []);
 
-  // NEW: Update High Score in real-time if current score beats it
   useEffect(() => {
     if (score > highScore) {
       setHighScore(score);
       localStorage.setItem("tetrisHighScore", score.toString());
     }
   }, [score, highScore]);
+
+  // NEW: Countdown Effect Hook
+  useEffect(() => {
+    if (countdown === null) return;
+    
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setIsPaused(false);
+      setCountdown(null);
+    }
+  }, [countdown]);
+
+  // NEW: Toggle Pause Function
+  const togglePause = () => {
+    if (gameOver) return;
+    if (isPaused && countdown === null) {
+      setCountdown(3); // Start countdown when unpausing
+    } else if (!isPaused) {
+      setIsPaused(true);
+      setCountdown(null);
+    }
+  };
 
   const calculateDropTime = (lvl: number) => {
     if (lvl <= 1) return 800; 
@@ -58,7 +82,8 @@ export default function Tetris() {
     return 16; 
   };
 
-  const dropTime = (isPaused || clearingRows.length > 0) ? null : calculateDropTime(level);
+  // Pause gravity if paused, counting down, or clearing lines
+  const dropTime = (isPaused || countdown !== null || clearingRows.length > 0) ? null : calculateDropTime(level);
 
   const resetGame = () => {
     setBoard(createEmptyBoard());
@@ -69,12 +94,14 @@ export default function Tetris() {
     setLevel(1);
     setGameOver(false);
     setIsPaused(false);
+    setCountdown(null);
     setCanHold(true);
     setClearingRows([]);
   };
 
   const confirmNewGame = () => {
     setIsPaused(true);
+    setCountdown(null); // Clear any active countdown
     Swal.fire({
       title: "New Game?",
       text: "Start over?",
@@ -83,8 +110,11 @@ export default function Tetris() {
       confirmButtonText: "Yes",
       cancelButtonText: "Resume"
     }).then((result) => {
-      if (result.isConfirmed) resetGame();
-      else setIsPaused(false);
+      if (result.isConfirmed) {
+        resetGame();
+      } else {
+        setCountdown(3); // Resume with a countdown
+      }
     });
   };
 
@@ -140,24 +170,24 @@ export default function Tetris() {
   }, [board, score, level, nextPiece]);
 
   const drop = useCallback(() => {
-    if (gameOver || isPaused || clearingRows.length > 0) return;
+    if (gameOver || isPaused || countdown !== null || clearingRows.length > 0) return;
 
     if (!checkCollision({ shape: player.tetromino.shape, x: player.pos.x, y: player.pos.y + 1 }, board)) {
       setPlayer((prev) => ({ ...prev, pos: { x: prev.pos.x, y: prev.pos.y + 1 } }));
     } else {
       lockPiece(player.pos.x, player.pos.y, player.tetromino); 
     }
-  }, [player, board, gameOver, isPaused, clearingRows, lockPiece]);
+  }, [player, board, gameOver, isPaused, countdown, clearingRows, lockPiece]);
 
   const movePlayer = (dir: number) => {
-    if (clearingRows.length > 0 || isPaused || gameOver) return; 
+    if (clearingRows.length > 0 || isPaused || countdown !== null || gameOver) return; 
     if (!checkCollision({ shape: player.tetromino.shape, x: player.pos.x + dir, y: player.pos.y }, board)) {
       setPlayer((prev) => ({ ...prev, pos: { x: prev.pos.x + dir, y: prev.pos.y } }));
     }
   };
 
   const rotatePlayer = () => {
-    if (clearingRows.length > 0 || isPaused || gameOver) return;
+    if (clearingRows.length > 0 || isPaused || countdown !== null || gameOver) return;
     const rotated = rotatePiece(player.tetromino.shape);
     if (!checkCollision({ shape: rotated, x: player.pos.x, y: player.pos.y }, board)) {
       setPlayer((prev) => ({ ...prev, tetromino: { ...prev.tetromino, shape: rotated } }));
@@ -165,7 +195,7 @@ export default function Tetris() {
   };
 
   const hold = () => {
-    if (!canHold || gameOver || isPaused || clearingRows.length > 0) return;
+    if (!canHold || gameOver || isPaused || countdown !== null || clearingRows.length > 0) return;
     if (!holdPiece) {
       setHoldPiece(player.tetromino);
       setPlayer({ pos: { x: 3, y: 0 }, tetromino: nextPiece });
@@ -179,7 +209,7 @@ export default function Tetris() {
   };
 
   const hardDrop = useCallback(() => {
-    if (gameOver || isPaused || clearingRows.length > 0) return;
+    if (gameOver || isPaused || countdown !== null || clearingRows.length > 0) return;
     
     let dropY = player.pos.y;
     while (!checkCollision({ shape: player.tetromino.shape, x: player.pos.x, y: dropY + 1 }, board)) {
@@ -187,11 +217,11 @@ export default function Tetris() {
     }
     
     lockPiece(player.pos.x, dropY, player.tetromino);
-  }, [player, board, gameOver, isPaused, clearingRows, lockPiece]);
+  }, [player, board, gameOver, isPaused, countdown, clearingRows, lockPiece]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (gameOver || isPaused || clearingRows.length > 0) return;
+      if (gameOver || isPaused || countdown !== null || clearingRows.length > 0) return;
       
       const key = e.key.toLowerCase();
       
@@ -200,12 +230,12 @@ export default function Tetris() {
       else if (key === "s") drop();
       else if (key === "w") rotatePlayer();
       else if (e.key === " ") { e.preventDefault(); hardDrop(); }
-      else if (key === "c" || key === "shift") hold();
+      else if (key === "c" || key === "shift") hold(); 
     };
     
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [player, gameOver, isPaused, clearingRows, movePlayer, drop, rotatePlayer, hardDrop, hold]);
+  }, [player, gameOver, isPaused, countdown, clearingRows, movePlayer, drop, rotatePlayer, hardDrop, hold]);
 
   useEffect(() => {
     if (dropTime === null) return;
@@ -237,12 +267,32 @@ export default function Tetris() {
       <div className="flex justify-between w-full mb-4 px-2 sm:px-0">
         <div className="flex flex-col gap-2">
           {renderMiniGrid(holdPiece, "Hold")}
-          <button onClick={() => setIsPaused(!isPaused)} className="bg-gray-700 text-white p-2 rounded-lg flex justify-center items-center hover:bg-gray-600">
-            {isPaused ? <Play size={18} /> : <Pause size={18} />}
+          {/* UPDATED: Play/Pause button now uses togglePause() */}
+          <button 
+            onClick={togglePause} 
+            className={`text-white p-2 rounded-lg flex justify-center items-center transition-colors ${isPaused ? "bg-green-600 hover:bg-green-500" : "bg-gray-700 hover:bg-gray-600"}`}
+          >
+            {isPaused && countdown === null ? <Play size={18} /> : <Pause size={18} />}
           </button>
         </div>
 
-        <div className="bg-gray-900 border-4 border-gray-700 p-1 rounded-lg shadow-xl">
+        <div className="bg-gray-900 border-4 border-gray-700 p-1 rounded-lg shadow-xl relative">
+          
+          {/* NEW: Pause & Countdown Overlay */}
+          {(isPaused || countdown !== null) && !gameOver && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/75 backdrop-blur-sm rounded-sm">
+              {countdown !== null ? (
+                <h1 className="text-6xl font-black text-white animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]">
+                  {countdown}
+                </h1>
+              ) : (
+                <h1 className="text-3xl font-black text-white tracking-widest drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
+                  PAUSED
+                </h1>
+              )}
+            </div>
+          )}
+
           <div className="grid gap-px bg-gray-800 relative" style={{ gridTemplateColumns: `repeat(${BOARD_WIDTH}, 20px)`, gridTemplateRows: `repeat(${BOARD_HEIGHT}, 20px)` }}>
             
             {board.map((row, y) => {
@@ -298,7 +348,6 @@ export default function Tetris() {
         <div className="flex flex-col gap-2">
           {renderMiniGrid(nextPiece, "Next")}
           
-          {/* NEW: High Score Display */}
           <div className="bg-gray-800 p-2 rounded-lg border-2 border-yellow-600/50 text-center text-white shadow-[0_0_10px_rgba(202,138,4,0.2)]">
             <p className="text-[10px] text-yellow-400 font-black tracking-widest uppercase">High Score</p>
             <p className="font-bold">{highScore}</p>
