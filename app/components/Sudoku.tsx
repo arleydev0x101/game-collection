@@ -14,7 +14,6 @@ export default function Sudoku() {
   const [message, setMessage] = useState<string | null>(null);
   const [isGameWon, setIsGameWon] = useState(false);
 
-  // Initialize game on first load
   useEffect(() => {
     initGame();
   }, []);
@@ -38,19 +37,27 @@ export default function Sudoku() {
   const handleNumberInput = (num: number) => {
     if (!selectedCell || isGameWon) return;
     const { r, c } = selectedCell;
-
+    
     if (board[r][c].isFixed) return;
 
     const newBoard = [...board].map(row => [...row]);
-
-    // Check against the solution: Red if wrong, Black/Blue if right
-    const isWrong = num !== solution[r][c];
+    const isWrong = num !== solution[r][c]; 
 
     newBoard[r][c] = { ...newBoard[r][c], value: num, isWrong };
     setBoard(newBoard);
-
-    // Check Win Condition
     checkWin(newBoard);
+  };
+
+  // NEW: Handle the Clear Button
+  const handleClear = () => {
+    if (!selectedCell || isGameWon) return;
+    const { r, c } = selectedCell;
+    
+    if (board[r][c].isFixed) return;
+
+    const newBoard = [...board].map(row => [...row]);
+    newBoard[r][c] = { ...newBoard[r][c], value: null, isWrong: false };
+    setBoard(newBoard);
   };
 
   const checkWin = (currentBoard: Cell[][]) => {
@@ -67,7 +74,6 @@ export default function Sudoku() {
     if (isCompleteAndCorrect) {
       setIsGameWon(true);
       setMessage("You Won!");
-      // Wait 5 seconds, then auto-restart
       setTimeout(() => {
         initGame();
       }, 5000);
@@ -90,18 +96,29 @@ export default function Sudoku() {
     });
   };
 
+  // NEW: Helper to count how many times a number is currently on the board
+  const getRemainingCount = (num: number) => {
+    let count = 0;
+    board.forEach(row => {
+      row.forEach(cell => {
+        if (cell.value === num) count++;
+      });
+    });
+    return Math.max(0, 9 - count); // Never show negative numbers
+  };
+
   if (board.length === 0) return <div>Loading...</div>;
 
+  // NEW: Find the value of the currently selected cell to highlight matches
+  const selectedValue = selectedCell ? board[selectedCell.r][selectedCell.c].value : null;
+
   return (
-    <div className="flex flex-col items-center justify-center w-full max-w-md mx-auto relative">
-      {/* Win Message Overlay */}
+    <div className="flex flex-col items-center justify-center w-full max-w-md mx-auto relative font-sans">
       {message && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/90 rounded-xl">
           <h1 className="text-5xl font-extrabold text-green-600 animate-bounce">{message}</h1>
         </div>
       )}
-
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">Sudoku</h1>
 
       {/* The Grid */}
       <div className="grid grid-cols-9 gap-0 border-4 border-gray-800 bg-gray-800 w-full aspect-square mb-6">
@@ -110,6 +127,9 @@ export default function Sudoku() {
             const isRightBorder = (cIndex + 1) % 3 === 0 && cIndex !== 8;
             const isBottomBorder = (rIndex + 1) % 3 === 0 && rIndex !== 8;
             const isSelected = selectedCell?.r === rIndex && selectedCell?.c === cIndex;
+            
+            // NEW: Highlight logic (light blue if it matches the selected number)
+            const isHighlighted = selectedValue !== null && cell.value === selectedValue && !isSelected;
 
             return (
               <div
@@ -118,8 +138,8 @@ export default function Sudoku() {
                 className={`flex items-center justify-center text-xl md:text-2xl font-semibold cursor-pointer select-none transition-colors
                   ${isRightBorder ? "border-r-4 border-r-gray-800" : "border-r border-r-gray-300"}
                   ${isBottomBorder ? "border-b-4 border-b-gray-800" : "border-b border-b-gray-300"}
-                  ${isSelected ? "bg-blue-200" : "bg-white hover:bg-blue-50"}
-                  ${cell.isFixed ? "text-gray-900" : cell.isWrong ? "text-red-500" : "text-gray-900"}
+                  ${isSelected ? "bg-blue-300" : isHighlighted ? "bg-blue-100" : "bg-white hover:bg-blue-50"}
+                  ${cell.isFixed ? "text-gray-900" : cell.isWrong ? "text-red-500" : "text-blue-700"}
                 `}
               >
                 {cell.value || ""}
@@ -129,18 +149,40 @@ export default function Sudoku() {
         )}
       </div>
 
-      {/* Number Pad (1-9) */}
-      <div className="grid grid-cols-5 md:grid-cols-9 gap-2 mb-6 w-full">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-          <button
-            key={num}
-            onClick={() => handleNumberInput(num)}
-            disabled={isGameWon}
-            className="bg-gray-200 hover:bg-gray-300 disabled:opacity-50 text-gray-800 font-bold py-3 md:py-4 rounded shadow active:scale-95 transition-transform"
-          >
-            {num}
-          </button>
-        ))}
+      {/* Number Pad (1-9) + Clear Button */}
+      <div className="grid grid-cols-5 gap-2 mb-6 w-full">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
+          const remaining = getRemainingCount(num);
+          const isCompleted = remaining === 0;
+
+          return (
+            <button
+              key={num}
+              onClick={() => handleNumberInput(num)}
+              disabled={isGameWon || isCompleted}
+              className={`flex flex-col items-center justify-center py-2 md:py-3 rounded shadow transition-transform 
+                ${isCompleted ? "bg-green-100 opacity-50 cursor-not-allowed" : "bg-gray-200 hover:bg-gray-300 active:scale-95"}
+              `}
+            >
+              <span className={`font-bold text-xl md:text-2xl ${isCompleted ? "text-green-700" : "text-gray-800"}`}>
+                {num}
+              </span>
+              <span className={`text-xs md:text-sm font-semibold ${isCompleted ? "text-green-600" : "text-gray-500"}`}>
+                {isCompleted ? "✓" : remaining}
+              </span>
+            </button>
+          );
+        })}
+
+        {/* NEW: Clear Button */}
+        <button
+          onClick={handleClear}
+          disabled={isGameWon}
+          className="flex flex-col items-center justify-center py-2 md:py-3 rounded shadow transition-transform bg-red-100 hover:bg-red-200 active:scale-95"
+        >
+          <span className="font-bold text-xl md:text-2xl text-red-600">✗</span>
+          <span className="text-xs md:text-sm font-semibold text-red-500">Clear</span>
+        </button>
       </div>
 
       {/* New Game Button */}
