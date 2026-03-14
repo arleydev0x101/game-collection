@@ -6,17 +6,23 @@ import Swal from "sweetalert2";
 import { Board, Player, checkWinner, getBestTicTacToeMove } from "../utils/tictactoe";
 
 export default function TicTacToe() {
+  const players = new Map<Player, string>([
+    ["X", "Player 1"],
+    ["O", "Player 2"],
+  ]);
+
   const [board, setBoard] = useState<Board>(Array(9).fill(null));
-  const [turn, setTurn] = useState<Player>("X");
+  const [turn, setTurn] = useState<Player>(players.get("X") ? "X" : "O");
   const [gameMode, setGameMode] = useState<"PvAI" | "PvP">("PvAI");
   const [difficulty, setDifficulty] = useState("Intermediate");
-  const [playerSide, setPlayerSide] = useState<Player>("X"); // Player acts as 'X' initially
-  const [gameStatus, setGameStatus] = useState("X's Turn");
+  const [playerSide, setPlayerSide] = useState<Player>(players.get("X") ? "X" : "O");
+  const [gameStatus, setGameStatus] = useState(`${players.get(turn)}'s Turn`);
   const [overlayMessage, setOverlayMessage] = useState<string | null>(null);
 
-  // We use the "captured pieces" areas to track score instead to keep the UI layout identical
   const [scoreX, setScoreX] = useState(0);
   const [scoreO, setScoreO] = useState(0);
+
+
 
   const updateGameStatus = useCallback((currentBoard: Board, currentTurn: Player) => {
     const winner = checkWinner(currentBoard);
@@ -25,17 +31,16 @@ export default function TicTacToe() {
         setGameStatus("It's a Draw!");
         setOverlayMessage("It's a Draw! 🤝");
       } else {
-        setGameStatus(`${winner} Wins!`);
-        setOverlayMessage(`${winner} Wins! 🎉`);
+        setGameStatus(`${players.get(winner)} Wins!`);
+        setOverlayMessage(`${players.get(winner)} Wins! 🎉`);
         if (winner === "X") setScoreX(s => s + 1);
         if (winner === "O") setScoreO(s => s + 1);
       }
     } else {
-      setGameStatus(`${currentTurn}'s Turn`);
+      setGameStatus(`${players.get(currentTurn)}'s Turn`);
     }
   }, []);
 
-  // AI Turn Handling
   useEffect(() => {
     if (gameMode === "PvAI" && turn !== playerSide && !overlayMessage) {
       const timeout = setTimeout(() => {
@@ -48,14 +53,14 @@ export default function TicTacToe() {
           setTurn(nextTurn);
           updateGameStatus(newBoard, nextTurn);
         }
-      }, 500); // 500ms delay for realism
+      }, 500);
       return () => clearTimeout(timeout);
     }
   }, [board, turn, gameMode, playerSide, difficulty, overlayMessage, updateGameStatus]);
 
   const handleSquareClick = (index: number) => {
-    if (overlayMessage || board[index]) return; // Game over or square taken
-    if (gameMode === "PvAI" && turn !== playerSide) return; // Not player's turn
+    if (overlayMessage || board[index]) return; 
+    if (gameMode === "PvAI" && turn !== playerSide) return; 
 
     const newBoard = [...board];
     newBoard[index] = turn;
@@ -66,7 +71,6 @@ export default function TicTacToe() {
     updateGameStatus(newBoard, nextTurn);
   };
 
-  // --- Button Controls (Exact Same as Chess) ---
   const handleResign = () => {
     Swal.fire({
       title: "Are you sure?",
@@ -79,7 +83,6 @@ export default function TicTacToe() {
       if (result.isConfirmed) {
         setOverlayMessage("You Resigned! 🏳️");
         setGameStatus("Player Resigned.");
-        // Give point to opponent
         if (playerSide === "X") setScoreO(s => s + 1);
         else setScoreX(s => s + 1);
       }
@@ -96,7 +99,7 @@ export default function TicTacToe() {
     }).then((result) => {
       if (result.isConfirmed) {
         setBoard(Array(9).fill(null));
-        setTurn("X"); // X always starts in standard Tic-Tac-Toe
+        setTurn("X"); 
         setOverlayMessage(null);
         updateGameStatus(Array(9).fill(null), "X");
       }
@@ -124,7 +127,6 @@ export default function TicTacToe() {
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-md mx-auto relative font-sans">
       
-      {/* Overlay Message */}
       {overlayMessage && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 rounded-xl backdrop-blur-sm">
           <h1 className="text-4xl font-extrabold text-white animate-pulse text-center p-4">
@@ -133,24 +135,25 @@ export default function TicTacToe() {
         </div>
       )}
 
-      {/* Top Status & Opponent Score */}
       <div className="w-full flex justify-between items-end mb-2 px-2">
         <h2 className="text-xl font-bold text-gray-800">{gameStatus}</h2>
         <div className="text-sm font-bold text-gray-600 drop-shadow-md">
-          {playerSide === "X" ? `O Wins: ${scoreO}` : `X Wins: ${scoreX}`}
+          {playerSide === "X" ? `${players.get("O")} Wins: ${scoreO}` : `${players.get("X")} Wins: ${scoreX}`}
         </div>
       </div>
 
-      {/* The Tic-Tac-Toe Grid */}
-      <div className="w-full aspect-square border-4 border-gray-800 rounded-lg overflow-hidden bg-gray-800 grid grid-cols-3 gap-1">
+      {/* FIX: Added grid-rows-3 to lock the height of the rows! */}
+      <div className="w-full aspect-square border-4 border-gray-800 rounded-lg overflow-hidden bg-gray-800 grid grid-cols-3 grid-rows-3 gap-1">
         {board.map((cell, index) => (
           <div
             key={index}
             onClick={() => handleSquareClick(index)}
-            className="bg-white flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
+            // FIX: Added w-full and h-full to force the cell to obey the grid
+            className="bg-white w-full h-full flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors overflow-hidden"
           >
             {cell && (
-              <span className={`text-6xl sm:text-8xl font-black drop-shadow-md ${cell === "X" ? "text-blue-600" : "text-red-600"}`}>
+              // FIX: Added leading-none to prevent the font's line-height from stretching the box
+              <span className={`text-7xl sm:text-9xl font-black drop-shadow-md leading-none select-none ${cell === "X" ? "text-blue-600" : "text-red-600"}`}>
                 {cell}
               </span>
             )}
@@ -158,14 +161,12 @@ export default function TicTacToe() {
         ))}
       </div>
 
-      {/* Player Score */}
       <div className="w-full flex justify-end mt-2 px-2 h-6">
          <div className="text-sm font-bold text-gray-600 drop-shadow-md">
           {playerSide === "X" ? `X Wins: ${scoreX}` : `O Wins: ${scoreO}`}
         </div>
       </div>
 
-      {/* Controls Section (Exact same structure as Chess & Checkers) */}
       <div className="w-full mt-4 space-y-3">
         <button 
           onClick={handleResign}
