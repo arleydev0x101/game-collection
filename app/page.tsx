@@ -16,7 +16,7 @@ import TicTacToe from "./components/TicTacToe";
 export default function Home() {
   const [activeGame, setActiveGame] = useState("sudoku");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false); 
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     const savedGame = localStorage.getItem("activeGame");
@@ -62,7 +62,7 @@ export default function Home() {
         html = `
           <div class="text-left text-sm md:text-base space-y-3">
             <p><b>Goal:</b> Clear lines by filling rows with blocks to score points. Don't let the blocks reach the top!</p>
-            <p><b>Desktop:</b> Use <b>Arrow Keys</b> to move and rotate. Press <b>Space</b> to Hard Drop. Press <b>C</b> or <b>Shift</b> to Hold a piece.</p>
+            <p><b>Desktop:</b> Use <b>W, A, S, D</b> to move and rotate. Press <b>Space</b> to Hard Drop. Press <b>C</b> or <b>Shift</b> to Hold a piece.</p>
             <p><b>Mobile:</b> Use the blue on-screen buttons below the board to move and rotate. Tap the purple Hand icon to Hold.</p>
           </div>
         `;
@@ -121,7 +121,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col relative font-sans pb-16">
-      
+
       {/* Top Right Navigation (Game Switcher) */}
       <div className="absolute top-4 right-4 z-10">
         <button
@@ -160,9 +160,8 @@ export default function Home() {
                     setActiveGame(game.id);
                     setIsModalOpen(false);
                   }}
-                  className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all ${
-                    activeGame === game.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"
-                  }`}
+                  className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all ${activeGame === game.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"
+                    }`}
                 >
                   <div className="text-blue-600 mb-2">{game.icon}</div>
                   <span className="font-semibold text-gray-700">{game.name}</span>
