@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { Menu, Grid3X3, Crown, SquareStack, Calculator, CircleDot, X, HelpCircle } from "lucide-react";
 import Swal from "sweetalert2";
+import { Analytics } from "@vercel/analytics/next";
 
 // Import all our completed game components
 import Sudoku from "./components/Sudoku";
@@ -121,7 +122,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col relative font-sans pb-16">
-
+      <Analytics />
       {/* Top Right Navigation (Game Switcher) */}
       <div className="absolute top-4 right-4 z-10">
         <button
